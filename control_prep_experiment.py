@@ -34,12 +34,12 @@ def get_median_num_unique_subreddit_per_user(submissions):
     return (count_by_author_and_subreddit(submissions).groupby(['author']).agg('count'))['subreddit'].agg('median')
 
 # return a data frame where each row contains the number of submissions in the subreddit(column) by a given author
-def get_author_per_subreddit(counts_author_and_subreddit):
-    return counts_author_subreddit_pair.pivot_table(index='author', columns='subreddit', values='count')
+def get_author_per_subreddit(counts_author_subreddit_pair):
+    return counts_author_subreddit_pair.pivot_table(index='author', columns='subreddit', values='count').fillna(0)
 
 # cast counts to a sparse datatype
 def get_sparse_df(df):
-    return df.fillna(0).astype(pd.SparseDtype("int16"))
+    return df.astype(pd.SparseDtype("int16"))
 
 # normalize each row to have a sum of 1
 def normalize_row(df):
@@ -73,6 +73,8 @@ def get_most_unique_subreddit_from_treatment(treatment_file_name):
 counts_author_subreddit_pair = count_by_author_and_subreddit(submissions)
 # print(counts_author_per_subreddit.head(5))
 counts_author_per_subreddit = get_author_per_subreddit(counts_author_subreddit_pair)
+# print(counts_author_per_subreddit.columns)
+# print(counts_author_per_subreddit.head(5))
 count_array = get_sparse_df(counts_author_per_subreddit)
 # print(count_array.head(5))
 most_unique_sr = get_most_unique_subreddit_from_counts(count_array)
@@ -87,3 +89,25 @@ most_unique_sr.to_csv(OUTPUT_FILE_NAME)
 end = time.time()
 print('runtime = ' + str(end-start))
 
+
+
+# count_by_author_and_subreddit_target = pd.DataFrame(
+#         [['a', 'Alice', 1],
+#         ['b', 'Alice', 1],
+#         ['b', 'Bob', 2],
+#         ['c', 'Alice', 1],
+#         ['c', 'Bob', 2],
+#         ['c', 'Charlie', 3]],
+#         columns=['author', 'subreddit', 'count']
+#     )
+# count_author_per_subreddit_target = pd.DataFrame(
+#     [['a', 1,0,0],
+#     ['b',1,2,0],
+#     ['c',1,2,3]],
+#     columns= ['author','Alice','Bob','Charlie']
+# )
+# res = get_author_per_subreddit(count_by_author_and_subreddit_target)
+# print(res)
+# print(res.columns)
+# print(count_author_per_subreddit_target.columns)
+# print(count_author_per_subreddit_target)
