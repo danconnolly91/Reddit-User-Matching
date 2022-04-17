@@ -7,12 +7,6 @@ from psaw import PushshiftAPI
 import datetime as dt
 import configparser
 
-start = time.time()
-
-config = configparser.ConfigParser()
-config.read('config.ini')
-config.sections()
-
 def user_exists(name):
     try:
         reddit.redditor(name).id
@@ -51,27 +45,6 @@ def convert_comments_to_df(user_comment_data, dataCols=['author', 'datetime', 'i
     comment_df = pd.DataFrame(user_comment_data, columns=dataCols)
     return comment_df
 
-reddit = praw.Reddit(client_id=config['SCRAPER SETTINGS']['clientId'], client_secret=config['SCRAPER SETTINGS']['clientSecret'],
-                     user_agent=config['SCRAPER SETTINGS']['userAgent'])
-api = PushshiftAPI(reddit)
-
-posts = []
-user_submission_data = []
-user_comment_data = []
-user_list = []  # list so that we don't scrape the same user twice
-max_posts = config['SCRAPER SETTINGS']['MAX_POSTS_BEFORE_WRITE']
-treatmentSubreddit = reddit.subreddit(config['SCRAPER SETTINGS']['treatmentSubreddit'])
-
-startYear = int(config['SCRAPER SETTINGS']['startYear'])
-startMonth = int(config['SCRAPER SETTINGS']['startMonth'])
-startDay = int(config['SCRAPER SETTINGS']['startDay'])
-start_epoch = int(dt.datetime(startYear, startMonth, startDay).timestamp())
-
-post_list = list(api.search_submissions(after=start_epoch,
-                                        subreddit=treatmentSubreddit,
-                                        filter=['url', 'author', 'title', 'subreddit']))
-
-post_counter = 0  # write to csv every 50 entries, just to save progress in case of crash
 def scrape(reddit, posts, user_submission_data, user_comment_data, user_list, post_list, post_counter):
     for post in post_list:
         try:
@@ -115,6 +88,38 @@ def scrape(reddit, posts, user_submission_data, user_comment_data, user_list, po
             sleep(1)
             pass
             continue
+
+
+start = time.time()
+
+config = configparser.ConfigParser()
+config.read('config.ini')
+config.sections()
+
+reddit = praw.Reddit(client_id=config['scraperSettings']['clientId'], client_secret=config['scraperSettings']['clientSecret'],
+                     user_agent=config['scraperSettings']['userAgent'])
+api = PushshiftAPI(reddit)
+
+posts = []
+user_submission_data = []
+user_comment_data = []
+user_list = []  # list so that we don't scrape the same user twice
+post_counter = 0  
+max_posts = config['scraperSettings']['MAX_POSTS_BEFORE_WRITE'] # write to csv every 50 entries, just to save progress in case of crash
+treatmentSubreddit = reddit.subreddit(config['scraperSettings']['treatmentSubreddit'])
+
+startYear = int(config['scraperSettings']['startYear'])
+startMonth = int(config['scraperSettings']['startMonth'])
+startDay = int(config['scraperSettings']['startDay'])
+start_epoch = int(dt.datetime(startYear, startMonth, startDay).timestamp())
+
+treatmentPostsLocation = config['outputPaths']['treatmentPosts']
+treatmentSubmissionsLocation = config['outputPaths']['treatmentSubmissions']
+treatmentCommentsLocation = config['outputPaths']['treatmentComments']
+
+post_list = list(api.search_submissions(after=start_epoch,
+                                        subreddit=treatmentSubreddit,
+                                        filter=['url', 'author', 'title', 'subreddit']))
 
 scrape(reddit, posts, user_submission_data, user_comment_data, user_list, post_list, post_counter)
 
