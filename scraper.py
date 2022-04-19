@@ -6,6 +6,7 @@ import time
 from psaw import PushshiftAPI
 import datetime as dt
 import configparser
+from collections import namedtuple
 
 def user_exists(name):
     try:
@@ -18,10 +19,11 @@ def user_exists(name):
 
 
 def append_submission_to_data(user_submission, user_submission_dataset):
-    user_submission_dataset.append([user_submission.title, user_submission.author, 
-    user_submission.score, user_submission.id, user_submission.subreddit, 
-    user_submission.url, user_submission.num_comments, user_submission.selftext, 
-    user_submission.created])
+    user_submission_dataset.append(
+        [user_submission.title, user_submission.author, user_submission.score, 
+        user_submission.id, user_submission.subreddit, user_submission.url, 
+        user_submission.num_comments, user_submission.selftext, user_submission.created])
+    return user_submission_dataset
 
 
 def append_comment_to_data(user_comment, user_comment_dataset):
@@ -29,20 +31,28 @@ def append_comment_to_data(user_comment, user_comment_dataset):
         [user_comment.author, user_comment.created_utc, user_comment.id, 
         user_comment.body, user_comment.subreddit, user_comment.score, 
         user_comment.parent_id, user_comment.is_submitter])
-
+    return user_comment_dataset
 
 def convert_posts_to_df(posts, dataCols=['title', 'author', 'score', 'id', 'subreddit', 'url', 'num_comments', 'body', 'created']):
-    post_df = pd.DataFrame(posts, columns=dataCols)
+    try:
+        post_df = pd.DataFrame(posts, columns=dataCols)
+    except ValueError:
+        post_df = pd.DataFrame(posts)
     return post_df
 
 
 def convert_submissions_to_df(user_submission_data, dataCols=['author', 'datetime', 'id', 'title', 'text', 'subreddit', 'num_comments', 'score', 'upvote_ratio']):
-    submission_df = pd.DataFrame(user_submission_data, columns=dataCols)
+    try:
+        submission_df = pd.DataFrame(user_submission_data, columns=dataCols)
+    except ValueError:
+        submission_df = pd.DataFrame(user_submission_data)
     return submission_df
 
-
 def convert_comments_to_df(user_comment_data, dataCols=['author', 'datetime', 'id', 'text', 'subreddit','score', 'parent_id', 'is_submitter']):
-    comment_df = pd.DataFrame(user_comment_data, columns=dataCols)
+    try:
+        comment_df = pd.DataFrame(user_comment_data, columns=dataCols)
+    except ValueError:
+        comment_df = pd.DataFrame(user_comment_data)
     return comment_df
 
 def scrape(reddit, posts, user_submission_data, user_comment_data, user_list, post_list, post_counter):
@@ -50,6 +60,8 @@ def scrape(reddit, posts, user_submission_data, user_comment_data, user_list, po
         try:
         # construct dataset of user
             user = str(post.author)
+            print(user)
+            print(post_counter)
             if user not in user_list and user_exists(user):
                 user_list.append(user)
                 user_submissions = list(reddit.redditor(user).submissions.new(limit=None))
@@ -61,7 +73,7 @@ def scrape(reddit, posts, user_submission_data, user_comment_data, user_list, po
                 for submission in user_submissions:
                     append_submission_to_data(submission, user_submission_data)
 
-            if post_counter == max_posts:
+            if post_counter >= max_posts:
             # write to df
                 print("writing!")
                 posts_df = convert_posts_to_df(posts)
@@ -77,20 +89,11 @@ def scrape(reddit, posts, user_submission_data, user_comment_data, user_list, po
             else:
                 post_counter += 1
 
-        except RequestException:
-            print("timed out, sleeping for a second before continuing")
-            sleep(1)
-            pass
+        except Exception as error:
+            print(error)
+            #print("timed out, sleeping for a second before continuing")
+            time.sleep(1)
             continue
-
-        except ReadTimeoutError:
-            print("timed out, sleeping for a second before continuing")
-            sleep(1)
-            pass
-            continue
-
-
-start = time.time()
 
 config = configparser.ConfigParser()
 config.read('config.ini')
@@ -105,7 +108,7 @@ user_submission_data = []
 user_comment_data = []
 user_list = []  # list so that we don't scrape the same user twice
 post_counter = 0  
-max_posts = config['scraperSettings']['MAX_POSTS_BEFORE_WRITE'] # write to csv every 50 entries, just to save progress in case of crash
+max_posts = int(config['scraperSettings']['MAX_POSTS_BEFORE_WRITE']) # write to csv every 50 entries, just to save progress in case of crash
 treatmentSubreddit = reddit.subreddit(config['scraperSettings']['treatmentSubreddit'])
 
 startYear = int(config['scraperSettings']['startYear'])
@@ -121,7 +124,5 @@ post_list = list(api.search_submissions(after=start_epoch,
                                         subreddit=treatmentSubreddit,
                                         filter=['url', 'author', 'title', 'subreddit']))
 
-scrape(reddit, posts, user_submission_data, user_comment_data, user_list, post_list, post_counter)
-
-end = time.time()
-print("runtime: " + str(end - start))
+if __name__ == '__main__':
+    scrape(reddit, posts, user_submission_data, user_comment_data, user_list, post_list, post_counter)
