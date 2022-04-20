@@ -55,9 +55,9 @@ def test_get_author_per_subreddit_mini():
             assert output.at[i,j] == count_author_per_subreddit_target.at[i,j]
             
 def test_get_author_per_subreddit_small():
-    count_result = count_by_author_and_subreddit(pd.read_csv('test_treatment_small.csv'))
+    count_result = count_by_author_and_subreddit(pd.read_csv('TestTreatmentData/test_treatment_small.csv'))
     output = get_author_per_subreddit(count_result)
-    target = pd.read_csv('pivot_table_small.csv').set_index('Row Label').fillna(0)
+    target = pd.read_csv('TestTreatmentData/pivot_table_small.csv').set_index('Row Label').fillna(0)
     assert output.shape == target.shape
     for i in output.index:
         for j in output.columns:
@@ -130,7 +130,7 @@ def test_get_most_unique_subreddit_from_counts():
     assert output.equals(target)
 
 def test_get_most_unique_subreddit_from_treatment_mini():
-    output = get_most_unique_subreddit_from_treatment("test_treatment_mini.csv")
+    output = get_most_unique_subreddit_from_treatment("TestTreatmentData/test_treatment_mini.csv")
     target = pd.Series({
         'Alice':'subreddit_1',
         'Bob':'subreddit_2',
