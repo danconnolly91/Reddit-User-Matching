@@ -7,14 +7,18 @@ A couple of methods for summary statistics are also included. (get_num_unique_co
 
 import pandas as pd
 import time
+import configparser
 
 start = time.time()
 
 """
-Configurations
+Load configurations
 """
-TREATMENT_FILE_PATH = 'all_posts_noru_treatment.csv'
-OUTPUT_FILE_NAME = 'subreddits_for_matching_experiment.csv'
+config = configparser.ConfigParser()
+config.read('config.ini')
+config.sections()
+TREATMENT_FILE_PATH = config['outputPaths']['treatmentSubmissions']
+OUTPUT_FILE_NAME = config['outputPaths']['userMatchingReddit']
 
 # return a new dataframe that contains the author, subreddit and correspond number of posts in the submissions
 def count_by_author_and_subreddit(submissions):
@@ -81,12 +85,12 @@ def get_most_unique_subreddit_from_treatment(treatment_file_name):
 # # print(count_array.head(5))
 # most_unique_sr = get_most_unique_subreddit_from_counts(count_array)
 
-most_unique_sr = get_most_unique_subreddit_from_treatment(TREATMENT_FILE_PATH)
+# most_unique_sr = get_most_unique_subreddit_from_treatment(TREATMENT_FILE_PATH)
 
 # assert most_unique_sr.equals(most_unique_sr2)
 
 # output to csv
-most_unique_sr.to_csv(OUTPUT_FILE_NAME)
+# most_unique_sr.to_csv(OUTPUT_FILE_NAME)
 
 
 end = time.time()
