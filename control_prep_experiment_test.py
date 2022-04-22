@@ -122,18 +122,20 @@ def test_get_index_max_of_row_rep():
 
 def test_get_most_unique_subreddit_from_counts():
     output = get_most_unique_subreddit_from_counts(count_author_per_subreddit_target)
-    target = pd.Series({
-        'Alice':'subreddit_1',
-        'Bob':'subreddit_2',
-        'Charlie': 'subreddit_3'}
+    target = pd.DataFrame([
+        ['Alice','subreddit_1'],
+        ['Bob','subreddit_2'],
+        ['Charlie','subreddit_3']],
+        columns= ['author','most_unique_sr']
     )
     assert output.equals(target)
 
 def test_get_most_unique_subreddit_from_treatment_mini():
     output = get_most_unique_subreddit_from_treatment("TestTreatmentData/test_treatment_mini.csv")
-    target = pd.Series({
-        'Alice':'subreddit_1',
-        'Bob':'subreddit_2',
-        'Charlie': 'subreddit_3'}
+    target = pd.DataFrame([
+        ['Alice','subreddit_1'],
+        ['Bob','subreddit_2'],
+        ['Charlie','subreddit_3']],
+        columns= ['author','most_unique_sr']
     )
     assert output.equals(target)
