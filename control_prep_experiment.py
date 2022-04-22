@@ -60,6 +60,8 @@ def get_most_unique_subreddit_from_counts(count_author_per_subreddit_array):
     activity_centered_array = activity_array - average_activity
     # Return index of first occurrence of maximum over requested axis
     max_idx = get_index_max_of_row(activity_centered_array)
+    max_idx = max_idx.to_frame().reset_index()
+    max_idx.columns = ['author','most_unique_sr']
     return max_idx
 
 def get_most_unique_subreddit_from_treatment(treatment_file_name):
@@ -85,13 +87,12 @@ def get_most_unique_subreddit_from_treatment(treatment_file_name):
 # # print(count_array.head(5))
 # most_unique_sr = get_most_unique_subreddit_from_counts(count_array)
 
-# most_unique_sr = get_most_unique_subreddit_from_treatment(TREATMENT_FILE_PATH)
+most_unique_sr = get_most_unique_subreddit_from_treatment(TREATMENT_FILE_PATH)
 
 # assert most_unique_sr.equals(most_unique_sr2)
 
 # output to csv
-# most_unique_sr.to_csv(OUTPUT_FILE_NAME)
-
+most_unique_sr.to_csv(OUTPUT_FILE_NAME)
 
 end = time.time()
 print('runtime = ' + str(end-start))
