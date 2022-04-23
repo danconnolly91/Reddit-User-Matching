@@ -10,8 +10,12 @@ import requests
 import itertools
 from datetime import datetime, timedelta
 import pprint
+import configparser
 
 start = time.time()
+
+SIZE = 500
+URI_TEMPLATE = r'https://api.pushshift.io/reddit/search/submission?subreddit={}&after={}&before={}&size={}'
 
 #helper functions
 def user_exists(name):
@@ -46,30 +50,26 @@ def make_request(uri, max_retries = 5):
     return fire_away(uri)
 
 
-def pull_posts_for_sub(subreddit_of_interest, start_at, end_at):
-    
-    def map_posts(posts):
+def map_posts(posts):
         return list(map(lambda post: {
             'id': post['id'],
             'created_utc': post['created_utc'],
         }, posts))
+
+
+def pull_posts_for_sub(subreddit_of_interest, start_at, end_at):
     
-    SIZE = 500
-    URI_TEMPLATE = r'https://api.pushshift.io/reddit/search/submission?subreddit={}&after={}&before={}&size={}'
-    
-    post_collections = map_posts( \
-        make_request( \
-            URI_TEMPLATE.format( \
-                subreddit_of_interest, start_at, end_at, SIZE))['data'])
+    requested_posts = make_request(URI_TEMPLATE.format(subreddit_of_interest, start_at, end_at, SIZE))['data']
+    post_collections = map_posts(requested_posts)  
     n = len(post_collections)
+
+    #if we collect the max number of posts, collect that many more
     while n == SIZE:
         last = post_collections[-1]
         new_start_at = last['created_utc'] - (10)
         
-        more_posts = map_posts( \
-            make_request( \
-                URI_TEMPLATE.format( \
-                    subreddit_of_interest, new_start_at, end_at, SIZE))['data'])
+        more_requests = make_request(URI_TEMPLATE.format(subreddit_of_interest, new_start_at, end_at, SIZE))['data']
+        more_posts = map_posts(more_requests)
         
         n = len(more_posts)
         post_collections.extend(more_posts)
@@ -98,13 +98,14 @@ def oom(number):
     else:
         return math.floor(math.log(number+1, 10))
     
+
 def check_match(submission_id, target_attributes):
-    """Acceots a reddit submission id and list of target attributes. Checks if the author of the post is a matche on the attributes
+    """Accepts a reddit submission id and list of target attributes. Checks if the author of the post is a matche on the attributes
     where match is defined as being within an order of magnitude on comment karma and link karma and within a year of account creation"""
     
     try:
         author = reddit.submission(id=submission_id).author
-        
+
         if author==None:
             return None
     
@@ -134,69 +135,88 @@ def check_start_date(reddit, subname, start_at):
         pass
     return start_at
 
+
 def get_target_stats(treatment_username):
     try:
         target_user = reddit.redditor(treatment_username)
-        target_stats = [key, oom(target_user.comment_karma), oom(target_user.link_karma), target_user.created_utc]
+        target_stats = [treatment_username, oom(target_user.comment_karma), oom(target_user.link_karma), target_user.created_utc]
         return target_stats
     #if the target user has been banned since, give them an empty match
     except Exception as error: 
-        print(error)
         target_stats = [None, None, None, None]
         return target_stats
 
-path = "C:/Users/Dan/Box/Class/Fall 2020/Large-Scale Social Phenomena/unemployment/"
+def record_match(matches, write_counter, treatment_user, unique_sr, match):
+    print('control user found for ' + treatment_user + '! the matched user is: ' + match +'. writing match')
+    matches.append([treatment_user, match, unique_sr])
+    write_counter += 1
+                
+    if write_counter >= MAX_MATCHES_BEFORE_WRITE: # write to csv
+        print('writing to file')
+        matches_df = pd.DataFrame(matches, columns=['treatment_user', 'control_user', 'subreddit'])
+        matches_df.to_csv(MATCHES_FILE_PATH)
+        write_counter = 0
 
-treatment_df = pd.read_csv('matches 12.6.csv')
-treatment_dict = dict(zip(treatment_df['treatment_user'], treatment_df['subreddit']))
+
+def check_posts_for_match(matches, write_counter, treatment_user, unique_sr, target_stats, pulled_posts):
+    for submission_id in np.unique([post['id'] for post in pulled_posts]):
+            match = check_match(submission_id, target_stats)
+            print(match)
+            if match is not None:
+                record_match(matches, write_counter, treatment_user, unique_sr, match)
+                return match
+    return None
+
+
+def match_users(treatment_user_dict):
+    matches = []
+    write_counter = 0
+
+    for treatment_user, unique_sr in treatment_user_dict.items():
+    #get list of target attributes from the treatment user
+        target_stats = get_target_stats(treatment_user)
+        if target_stats == [None, None, None, None]:
+            matches.append([treatment_user, unique_sr, ''])
+
+    #start searching posts around the target user's account creation date   
+        start_at = math.floor(target_stats[3]) 
+        start_at = check_start_date(reddit, unique_sr, start_at)
+        
+    #get list of submissions in the most unique subreddit for that user
+        print('pulling posts for ' + treatment_user + ' in '+ unique_sr)
+        intervals = list(give_me_intervals(start_at, 7))
+        for interval in intervals[:SEARCH_WINDOW_IN_WKS+1]: #check each week for a year. if no user if found after a year, move on
+            pulled_posts = pull_posts_for_sub(unique_sr, interval[0], interval[1])
+            print('pulled ' + str(len(pulled_posts)) + ' posts in ' + str(interval))
+        
+            match_in_interval = check_posts_for_match(matches, write_counter, treatment_user, unique_sr, target_stats, pulled_posts)
+            if match_in_interval is not None:
+                break
+
+
+"""
+Load configurations
+"""
+config = configparser.ConfigParser()
+config.read('config.ini')
+config.sections()
+
+UNIQUE_SR_PATH = config['outputPaths']['userMatchingReddit']
+MATCHES_FILE_PATH = config['outputPaths']['matchedUsers']
+TIMEOUT_AFTER_REQUEST_IN_SECS = float(config['matchSettings']['TIMEOUT_AFTER_REQUEST_IN_SECS'])
+SEARCH_WINDOW_IN_WKS = int(config['matchSettings']['SEARCH_WINDOW_IN_WKS'])
+MAX_MATCHES_BEFORE_WRITE = int(config['matchSettings']['MAX_MATCHES_BEFORE_WRITE'])
+utc_year = 31536000000 #difference of 1 year between 2 timestamps
+
+treatment_df = pd.read_csv(UNIQUE_SR_PATH)
+treatment_dict = dict(zip(treatment_df['author'], treatment_df['most_unique_sr']))
 
 reddit = praw.Reddit(client_id='ArgFl6Em2AuwoA', client_secret='WP0DaW1B_inHi3Lf8Du8Ag5ag9Y', user_agent='contentScraper')
 api = PushshiftAPI(reddit)
 
-matches = []
-crawled_reddits = {}
-TIMEOUT_AFTER_REQUEST_IN_SECS = .5
-utc_year = 31536000000 #difference of 1 year between 2 timestamps
-write_counter = 0
+if __name__ == '__main__':
+    match_users(treatment_dict)
 
-for key, value in treatment_dict.items():
-    #get list of target attributes from the treatment user
-    target_stats = get_target_stats(key)
-    if target_stats == [None, None, None, None]:
-        matches.append([key, value, ''])
-
-    #start searching posts around the target user's account creation date   
-    start_at = math.floor(target_stats[3]) 
-    start_at = check_start_date(reddit, value, start_at)
-        
-    #get list of submissions in the most unique subreddit for that user
-    print('pulling posts for ' + value)
-    num_posts_checked = 0
-    intervals = list(give_me_intervals(start_at, 7))
-    for interval in intervals[:53]: #check each week for a year. if no user if found after a year, move on
-        pulled_posts = pull_posts_for_sub(value, interval[0], interval[1])
-        print('pulled ' + str(len(pulled_posts)) + ' posts in ' + str(interval))
-        
-        for submission_id in np.unique([post['id'] for post in pulled_posts]):
-                match = check_match(submission_id, target_stats)
-                if match is not None:
-                    print('control user found for ' + key + '! the matched user is: ' + match +'. writing match')
-                    matches.append([key, value, match])
-                    write_counter += 1
-                
-                    if write_counter == 3: # write to csv
-                        print('writing to file')
-                        matches_df = pd.DataFrame(matches, columns=['treatment_user', 'control_user', 'subreddit'])
-                        #matches_df.to_csv('matches_12_17.csv')
-                        write_counter = 0
-                    
-                    break
-        
-        else:
-            num_posts_checked+=len(pulled_posts) 
-            continue
-
-        break
 
 end = time.time()
 print("runtime: " + str(end - start))
