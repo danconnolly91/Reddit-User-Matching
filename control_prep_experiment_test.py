@@ -1,5 +1,5 @@
 import pandas as pd
-from control_prep_experiment import count_by_author_and_subreddit, get_num_unique_column_in_df, get_median_num_unique_subreddit_per_user, get_author_per_subreddit, get_sparse_df, normalize_row, average_by_column, get_index_max_of_row, get_most_unique_subreddit_from_counts, get_most_unique_subreddit_from_treatment
+from control_prep_experiment import count_by_author_and_subreddit, get_num_unique_column_in_df, get_median_num_unique_subreddit_per_user, get_author_per_subreddit, get_sparse_df, normalize_row, average_by_column, get_index_max_of_row, get_most_unique_subreddit_from_counts, get_most_unique_subreddit_from_treatment, get_avg_active_datetime_for_author_in_subreddit, merge_matching_subreddit_and_avg_active_time, get_most_unique_subreddit_and_time_from_treatment
 
 empty_df = pd.DataFrame({'author': [], 'subreddit': []})
 test_df = pd.DataFrame(
@@ -139,3 +139,65 @@ def test_get_most_unique_subreddit_from_treatment_mini():
         columns= ['author','most_unique_sr']
     )
     assert output.equals(target)
+
+def test_get_avg_active_datetime_for_author_in_subreddit():
+    input_df = pd.DataFrame(
+        [['Alice', 'subreddit_1',0],
+        ['Bob', 'subreddit_1', 1],
+        ['Bob', 'subreddit_2', 0],
+        ['Bob', 'subreddit_2', 2],
+        ['Charlie', 'subreddit_1', 2],
+        ['Charlie', 'subreddit_2', 1],
+        ['Charlie', 'subreddit_2', 3],
+        ['Charlie', 'subreddit_3', -6],
+        ['Charlie', 'subreddit_3', 0 ],
+        ['Charlie', 'subreddit_3', 12]],
+        columns=['author', 'subreddit', 'datetime']
+    )
+    target = pd.DataFrame(
+        [['Alice', 'subreddit_1', 0.0],
+        ['Bob', 'subreddit_1', 1.0],
+        ['Bob', 'subreddit_2', 1.0],
+        ['Charlie', 'subreddit_1', 2.0],
+        ['Charlie', 'subreddit_2', 2.0],
+        ['Charlie', 'subreddit_3', 2.0]],
+        columns=['author', 'subreddit', 'datetime']
+    )
+    output = get_avg_active_datetime_for_author_in_subreddit(input_df)
+    assert output.equals(target)
+
+def test_merge_matching_subreddit_and_avg_active_time():
+    subreddit_for_matching_sample = pd.DataFrame([
+        ['Alice','subreddit_1'],
+        ['Bob','subreddit_2'],
+        ['Charlie','subreddit_3']],
+        columns= ['author','most_unique_sr']
+    )
+    avg_time_sample = pd.DataFrame(
+        [['Alice', 'subreddit_1', 1.0],
+        ['Bob', 'subreddit_1', 1.0],
+        ['Bob', 'subreddit_2', 2.0],
+        ['Charlie', 'subreddit_1', 1.0],
+        ['Charlie', 'subreddit_2', 2.0],
+        ['Charlie', 'subreddit_3', 3.0]],
+        columns=['author', 'subreddit', 'datetime']
+    )
+    target = pd.DataFrame([
+        ['Alice','subreddit_1', 1.0],
+        ['Bob','subreddit_2', 2.0],
+        ['Charlie','subreddit_3', 3.0]],
+        columns= ['author','most_unique_sr','datetime']
+    )
+    output = merge_matching_subreddit_and_avg_active_time(subreddit_for_matching_sample, avg_time_sample)
+    assert output.equals(target)
+
+def test_get_most_unique_subreddit_and_time_from_treatment_mini():
+    output = get_most_unique_subreddit_and_time_from_treatment("TestTreatmentData/test_treatment_mini.csv")
+    target = pd.DataFrame([
+        ['Alice','subreddit_1', 1.0],
+        ['Bob','subreddit_2', 4.0],
+        ['Charlie','subreddit_3', 9.0]],
+        columns= ['author','most_unique_sr', 'datetime']
+    )
+    assert output.equals(target)
+
