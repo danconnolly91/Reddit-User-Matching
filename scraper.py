@@ -1,7 +1,6 @@
 import praw
 import prawcore
 import pandas as pd
-import pprint
 import time
 from psaw import PushshiftAPI
 import datetime as dt
@@ -16,6 +15,13 @@ def user_exists(name):
     except AttributeError:
         return False
     return True
+
+def append_post_to_data(post, post_dataset):
+    post_dataset.append(
+        [post.title, post.author, post.score, 
+        post.id, post.subreddit, post.url, 
+        post.num_comments, post.selftext, post.created])
+    return post_dataset
 
 
 def append_submission_to_data(user_submission, user_submission_dataset):
@@ -33,6 +39,7 @@ def append_comment_to_data(user_comment, user_comment_dataset):
         user_comment.parent_id, user_comment.is_submitter])
     return user_comment_dataset
 
+
 def convert_posts_to_df(posts, dataCols=['title', 'author', 'score', 'id', 'subreddit', 'url', 'num_comments', 'body', 'created']):
     try:
         post_df = pd.DataFrame(posts, columns=dataCols)
@@ -41,12 +48,13 @@ def convert_posts_to_df(posts, dataCols=['title', 'author', 'score', 'id', 'subr
     return post_df
 
 
-def convert_submissions_to_df(user_submission_data, dataCols=['author', 'datetime', 'id', 'title', 'text', 'subreddit', 'num_comments', 'score', 'upvote_ratio']):
+def convert_submissions_to_df(user_submission_data, dataCols=['title', 'author', 'score', 'id', 'subreddit', 'url', 'num_comments', 'body', 'created']):
     try:
         submission_df = pd.DataFrame(user_submission_data, columns=dataCols)
     except ValueError:
         submission_df = pd.DataFrame(user_submission_data)
     return submission_df
+
 
 def convert_comments_to_df(user_comment_data, dataCols=['author', 'datetime', 'id', 'text', 'subreddit','score', 'parent_id', 'is_submitter']):
     try:
@@ -55,8 +63,10 @@ def convert_comments_to_df(user_comment_data, dataCols=['author', 'datetime', 'i
         comment_df = pd.DataFrame(user_comment_data)
     return comment_df
 
-def scrape(reddit, posts, user_submission_data, user_comment_data, user_list, post_list, post_counter):
+
+def scrape(reddit, post_data, user_submission_data, user_comment_data, user_list, post_list, post_counter):
     for post in post_list:
+        append_post_to_data(post, post_data)
         try:
         # construct dataset of user
             user = str(post.author)
@@ -76,7 +86,7 @@ def scrape(reddit, posts, user_submission_data, user_comment_data, user_list, po
             if post_counter >= max_posts:
             # write to df
                 print("writing!")
-                posts_df = convert_posts_to_df(posts)
+                posts_df = convert_posts_to_df(post_data)
                 user_submission_df = convert_submissions_to_df(user_submission_data)
                 user_comment_df = convert_comments_to_df(user_comment_data)
             # write to csv
@@ -91,9 +101,9 @@ def scrape(reddit, posts, user_submission_data, user_comment_data, user_list, po
 
         except Exception as error:
             print(error)
-            #print("timed out, sleeping for a second before continuing")
             time.sleep(1)
             continue
+
 
 config = configparser.ConfigParser()
 config.read('config.ini')
@@ -103,7 +113,7 @@ reddit = praw.Reddit(client_id=config['scraperSettings']['clientId'], client_sec
                      user_agent=config['scraperSettings']['userAgent'])
 api = PushshiftAPI(reddit)
 
-posts = []
+post_dataset = []
 user_submission_data = []
 user_comment_data = []
 user_list = []  # list so that we don't scrape the same user twice
@@ -125,4 +135,4 @@ post_list = list(api.search_submissions(after=start_epoch,
                                         filter=['url', 'author', 'title', 'subreddit']))
 
 if __name__ == '__main__':
-    scrape(reddit, posts, user_submission_data, user_comment_data, user_list, post_list, post_counter)
+    scrape(reddit, post_dataset, user_submission_data, user_comment_data, user_list, post_list, post_counter)
