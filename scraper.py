@@ -64,7 +64,7 @@ def convert_comments_to_df(user_comment_data, dataCols=['author', 'datetime', 'i
     return comment_df
 
 
-def scrape(reddit, post_data, user_submission_data, user_comment_data, user_list, post_list, post_counter):
+def scrape(reddit, post_data, user_submission_data, user_comment_data, user_list, post_list, post_counter,treatmentPostsLocation,treatmentSubmissionsLocation,treatmentCommentsLocation):
     for post in post_list:
         append_post_to_data(post, post_data)
         try:
@@ -90,9 +90,9 @@ def scrape(reddit, post_data, user_submission_data, user_comment_data, user_list
                 user_submission_df = convert_submissions_to_df(user_submission_data)
                 user_comment_df = convert_comments_to_df(user_comment_data)
             # write to csv
-                posts_df.to_csv('posts.csv')
-                user_submission_df.to_csv('submissions.csv')
-                user_comment_df.to_csv('comments.csv')
+                posts_df.to_csv(treatmentPostsLocation)
+                user_submission_df.to_csv(treatmentSubmissionsLocation)
+                user_comment_df.to_csv(treatmentCommentsLocation)
             # reset counter
                 post_counter = 0
 
@@ -135,4 +135,4 @@ post_list = list(api.search_submissions(after=start_epoch,
                                         filter=['url', 'author', 'title', 'subreddit']))
 
 if __name__ == '__main__':
-    scrape(reddit, post_dataset, user_submission_data, user_comment_data, user_list, post_list, post_counter)
+    scrape(reddit, post_dataset, user_submission_data, user_comment_data, user_list, post_list, post_counter,treatmentPostsLocation,treatmentSubmissionsLocation,treatmentCommentsLocation)
