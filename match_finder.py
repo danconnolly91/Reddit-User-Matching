@@ -192,7 +192,7 @@ def match_users(treatment_user_dict):
             match_in_interval = check_posts_for_match(matches, write_counter, treatment_user, unique_sr, target_stats, pulled_posts)
             if match_in_interval is not None:
                 break
-
+    return matches
 
 """
 Load configurations
@@ -211,11 +211,14 @@ utc_year = 31536000000 #difference of 1 year between 2 timestamps
 treatment_df = pd.read_csv(UNIQUE_SR_PATH)
 treatment_dict = dict(zip(treatment_df['author'], treatment_df['most_unique_sr']))
 
-reddit = praw.Reddit(client_id='ArgFl6Em2AuwoA', client_secret='WP0DaW1B_inHi3Lf8Du8Ag5ag9Y', user_agent='contentScraper')
+reddit = praw.Reddit(client_id=config['scraperSettings']['clientId'], client_secret=config['scraperSettings']['clientSecret'],
+                     user_agent=config['scraperSettings']['userAgent'])
 api = PushshiftAPI(reddit)
 
 if __name__ == '__main__':
-    match_users(treatment_dict)
+    matches = match_users(treatment_dict)
+    matches_df = pd.DataFrame(matches)
+    matches_df.to_csv(MATCHES_FILE_PATH)
 
 
 end = time.time()
