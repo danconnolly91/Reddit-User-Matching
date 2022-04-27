@@ -63,7 +63,7 @@ def pull_posts_for_sub(subreddit_of_interest, start_at, end_at):
     post_collections = map_posts(requested_posts)  
     n = len(post_collections)
 
-    #if we collect the max number of posts, collect that many more
+    #if we collect the max number of posts, collect more
     while n == SIZE:
         last = post_collections[-1]
         new_start_at = last['created_utc'] - (10)
@@ -99,27 +99,25 @@ def oom(number):
         return math.floor(math.log(number+1, 10))
     
 
-def check_match(submission_id, target_attributes):
+def check_match(potential_match, target_attributes):
     """Accepts a reddit submission id and list of target attributes. Checks if the author of the post is a matche on the attributes
     where match is defined as being within an order of magnitude on comment karma and link karma and within a year of account creation"""
     
     try:
-        author = reddit.submission(id=submission_id).author
-
-        if author==None:
+        if potential_match==None:
             return None
     
-        author_stats = [author.name, oom(author.comment_karma), oom(author.link_karma), author.created_utc]
+        author_stats = [potential_match.name, oom(potential_match.comment_karma), oom(potential_match.link_karma), potential_match.created_utc]
         loss = [((target_attributes[1]-author_stats[1])==0), ((target_attributes[2]-author_stats[2])==0), 
                                                         ((target_attributes[3]-author_stats[3])<utc_year)]
     except:
         return None
     
     if loss == [True, True, True] :         
-        if author.name == target_attributes[0]:
+        if potential_match.name == target_attributes[0]:
             return None
         else:                                       
-            return author.name  
+            return potential_match.name  
     else:
         return None
 
@@ -160,8 +158,9 @@ def record_match(matches, write_counter, treatment_user, unique_sr, match):
 
 def check_posts_for_match(matches, write_counter, treatment_user, unique_sr, target_stats, pulled_posts):
     for submission_id in np.unique([post['id'] for post in pulled_posts]):
-            match = check_match(submission_id, target_stats)
-            print(match)
+            author = reddit.submission(id=submission_id).author
+            match = check_match(author, target_stats)
+            print(author)
             if match is not None:
                 record_match(matches, write_counter, treatment_user, unique_sr, match)
                 return match
@@ -173,7 +172,6 @@ def match_users(treatment_user_dict):
     write_counter = 0
 
     for treatment_user, unique_sr in treatment_user_dict.items():
-    #get list of target attributes from the treatment user
         target_stats = get_target_stats(treatment_user)
         if target_stats == [None, None, None, None]:
             matches.append([treatment_user, unique_sr, ''])
@@ -185,7 +183,7 @@ def match_users(treatment_user_dict):
     #get list of submissions in the most unique subreddit for that user
         print('pulling posts for ' + treatment_user + ' in '+ unique_sr)
         intervals = list(give_me_intervals(start_at, 7))
-        for interval in intervals[:SEARCH_WINDOW_IN_WKS+1]: #check each week for a year. if no user if found after a year, move on
+        for interval in intervals[:SEARCH_WINDOW_IN_WKS+1]: #check as many weeks as config file says to. if no user is found within the window, move on
             pulled_posts = pull_posts_for_sub(unique_sr, interval[0], interval[1])
             print('pulled ' + str(len(pulled_posts)) + ' posts in ' + str(interval))
         
@@ -201,7 +199,7 @@ config = configparser.ConfigParser()
 config.read('config.ini')
 config.sections()
 
-UNIQUE_SR_PATH = config['outputPaths']['userMatchingReddit']
+UNIQUE_SR_PATH = config['outputPaths']['userMatchingReddits']
 MATCHES_FILE_PATH = config['outputPaths']['matchedUsers']
 TIMEOUT_AFTER_REQUEST_IN_SECS = float(config['matchSettings']['TIMEOUT_AFTER_REQUEST_IN_SECS'])
 SEARCH_WINDOW_IN_WKS = int(config['matchSettings']['SEARCH_WINDOW_IN_WKS'])
@@ -219,7 +217,6 @@ if __name__ == '__main__':
     matches = match_users(treatment_dict)
     matches_df = pd.DataFrame(matches)
     matches_df.to_csv(MATCHES_FILE_PATH)
-
 
 end = time.time()
 print("runtime: " + str(end - start))
