@@ -18,7 +18,7 @@ config = configparser.ConfigParser()
 config.read('config.ini')
 config.sections()
 TREATMENT_FILE_PATH = config['outputPaths']['treatmentSubmissions']
-OUTPUT_FILE_NAME = config['outputPaths']['userMatchingReddit']
+OUTPUT_FILE_NAME = config['outputPaths']['userMatchingReddits']
 
 # return a new dataframe that contains the author, subreddit and correspond number of posts in the submissions
 def count_by_author_and_subreddit(submissions):

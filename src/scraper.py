@@ -71,7 +71,6 @@ def scrape(reddit, post_data, user_submission_data, user_comment_data, user_list
         # construct dataset of user
             user = str(post.author)
             print(user)
-            print(post_counter)
             if user not in user_list and user_exists(user):
                 user_list.append(user)
                 user_submissions = list(reddit.redditor(user).submissions.new(limit=None))
