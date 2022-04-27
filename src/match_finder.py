@@ -7,9 +7,7 @@ import numpy as np
 import math
 import json
 import requests
-import itertools
-from datetime import datetime, timedelta
-import pprint
+from datetime import datetime
 import configparser
 
 start = time.time()
@@ -39,14 +37,13 @@ def make_request(uri, max_retries = 5):
     
     while current_tries < max_retries:
         try:
-            time.sleep(.5)
             response = fire_away(uri)
             return response
         
         except:
             time.sleep(.5)
             current_tries += 1
-            
+     
     return fire_away(uri)
 
 
@@ -144,25 +141,25 @@ def get_target_stats(treatment_username):
         target_stats = [None, None, None, None]
         return target_stats
 
-def record_match(matches, write_counter, treatment_user, unique_sr, match):
-    print('control user found for ' + treatment_user + '! the matched user is: ' + match +'. writing match')
-    matches.append([treatment_user, match, unique_sr])
-    write_counter += 1
+def record_match(list_of_matches, counter, treatment_username, matching_sr, matched_user):
+    print('control user found for ' + treatment_username + '! the matched user is: ' + matched_user +'. recording match')
+    list_of_matches.append([treatment_username, matched_user, matching_sr])
+    counter += 1
                 
-    if write_counter >= MAX_MATCHES_BEFORE_WRITE: # write to csv
+    if counter >= MAX_MATCHES_BEFORE_WRITE: # write to csv
         print('writing to file')
-        matches_df = pd.DataFrame(matches, columns=['treatment_user', 'control_user', 'subreddit'])
+        matches_df = pd.DataFrame(list_of_matches, columns=['treatment_user', 'control_user', 'subreddit'])
         matches_df.to_csv(MATCHES_FILE_PATH)
-        write_counter = 0
+        counter = 0
 
 
-def check_posts_for_match(matches, write_counter, treatment_user, unique_sr, target_stats, pulled_posts):
+def check_posts_for_match(list_of_matches, counter, treatment_username, matching_sr, target_stats_for_match, pulled_posts):
     for submission_id in np.unique([post['id'] for post in pulled_posts]):
             author = reddit.submission(id=submission_id).author
-            match = check_match(author, target_stats)
-            print(author)
+            match = check_match(author, target_stats_for_match)
+
             if match is not None:
-                record_match(matches, write_counter, treatment_user, unique_sr, match)
+                record_match(list_of_matches, counter, treatment_username, matching_sr, match)
                 return match
     return None
 
@@ -215,8 +212,6 @@ api = PushshiftAPI(reddit)
 
 if __name__ == '__main__':
     matches = match_users(treatment_dict)
-    matches_df = pd.DataFrame(matches)
-    matches_df.to_csv(MATCHES_FILE_PATH)
 
 end = time.time()
 print("runtime: " + str(end - start))
