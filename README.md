@@ -1,7 +1,5 @@
 # Creating Comparison Groups for Event Study on Reddit
 
-## Introduction
-
 The algorithms matches reddit users in steps:
 
     1. Scrape the subreddits of interest
@@ -17,12 +15,14 @@ The algorithms matches reddit users in steps:
 Steps 1&2 are achieved by 'scraper.py', Step 3 in 'unique_sr_finder.py', Step 4 in 'match_finder.py' and Step 5 in 'control_scraper.py'
 
 ## Instructions
+
 Make sure that you have access to the [Reddit API](https://www.reddit.com/prefs/apps). You will need the 'personal use script' and 'secret'.
 
 Additionally, the script uses 'praw, psaw, configparser, numpy and pandas' modules, so please be sure to install those.
 
 To run the script:
-    1. Input your Reddit API credentials in the 'scraperSettings' of config_public.ini ('personal use script' as 'clientID', 'secret' as 'clientSecret', 'userAgent' should be something [unique and descriptive] (https://github.com/reddit-archive/reddit/wiki/API))
+
+    1. Input your Reddit API credentials in the 'scraperSettings' of config_public.ini ('personal use script' as 'clientID', 'secret' as 'clientSecret', 'userAgent' should be something [unique and descriptive](https://github.com/reddit-archive/reddit/wiki/API))
 
     2. Fill in the 'treatmentSubreddit' and change other configurations as you see fit 
 
