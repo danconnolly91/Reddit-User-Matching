@@ -7,6 +7,8 @@ import datetime as dt
 import configparser
 from collections import namedtuple
 
+start = time.time()
+
 def user_exists(name):
     try:
         reddit.redditor(name).id
@@ -70,7 +72,7 @@ def scrape(reddit, post_data, user_submission_data, user_comment_data, user_list
         try:
         # construct dataset of user
             user = str(post.author)
-            print(user)
+            print('scraping posts for user: ' + user)
             if user not in user_list and user_exists(user):
                 user_list.append(user)
                 user_submissions = list(reddit.redditor(user).submissions.new(limit=None))
@@ -135,3 +137,6 @@ post_list = list(api.search_submissions(after=start_epoch,
 
 if __name__ == '__main__':
     scrape(reddit, post_dataset, user_submission_data, user_comment_data, user_list, post_list, post_counter,treatmentPostsLocation,treatmentSubmissionsLocation,treatmentCommentsLocation)
+
+end = time.time()
+print("runtime: " + str(end - start))
