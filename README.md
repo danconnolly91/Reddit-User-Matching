@@ -12,7 +12,7 @@ The algorithms matches reddit users in steps:
 
     5. Scrape the activities of the control group
 
-Steps 1&2 are achieved by 'scraper.py', Step 3 in 'unique_sr_finder.py', Step 4 in 'match_finder.py' and Step 5 in 'control_scraper.py'
+Steps 1&2 are achieved by `scraper.py`, Step 3 in `unique_sr_finder.py`, Step 4 in `match_finder.py` and Step 5 in `control_scraper.py`
 
 ## Instructions
 
@@ -22,14 +22,18 @@ Additionally, the script uses 'praw, psaw, configparser, numpy and pandas' modul
 
 To run the script:
 
-    1. Input your Reddit API credentials in the 'scraperSettings' of config_public.ini ('personal use script' as 'clientID', 'secret' as 'clientSecret', 'userAgent' should be something [unique and descriptive](https://github.com/reddit-archive/reddit/wiki/API))
+    1. Input your Reddit API credentials in the 'scraperSettings' of config_public.ini 
+        -`personal use script` as `clientID`
+        -`secret` as `clientSecret`
+        -`userAgent` should be something [unique and descriptive](https://github.com/reddit-archive/reddit/wiki/API))
 
-    2. Fill in the 'treatmentSubreddit' and change other configurations as you see fit 
+    2. Fill in the `treatmentSubreddit` and change other configurations as you see fit 
 
     3. Rename config_public.ini to config.ini
 
     4. Navigate to the root directory in command line
 
-    5. 'chmod +x user_matching.sh' to make the script executable
+    5. `chmod +x user_matching.sh` to make the script executable
 
-    6. './user_matching.sh' to run the script ('match_finder2.py' is a multiprocess version of 'match_finder.py'. Use with caution)
+    6. `./user_matching.sh` to run the script 
+        - `match_finder2.py` is a multiprocess version of `match_finder.py`. Use with caution
