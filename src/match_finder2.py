@@ -46,8 +46,12 @@ def map_posts(posts):
 def pull_posts_for_sub(subreddit_of_interest, start_at, end_at):
     
     requested_posts = make_request(URI_TEMPLATE.format(subreddit_of_interest, start_at, end_at, SIZE))['data']
-    post_collections = map_posts(requested_posts)  
-    n = len(post_collections)
+    if (requested_posts == None):
+        n = -1
+        post_collections = list()
+    else:
+        post_collections = map_posts(requested_posts)  
+        n = len(post_collections)
 
     #if we collect the max number of posts, collect more
     while n == SIZE:
@@ -55,10 +59,13 @@ def pull_posts_for_sub(subreddit_of_interest, start_at, end_at):
         new_start_at = last['created_utc'] - (10)
         
         more_requests = make_request(URI_TEMPLATE.format(subreddit_of_interest, new_start_at, end_at, SIZE))['data']
-        more_posts = map_posts(more_requests)
+        if more_requests == None:
+            n = -1
+        else:
+            more_posts = map_posts(more_requests)
         
-        n = len(more_posts)
-        post_collections.extend(more_posts)
+            n = len(more_posts)
+            post_collections.extend(more_posts)
         
     return post_collections 
     
