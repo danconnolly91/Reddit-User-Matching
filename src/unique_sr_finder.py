@@ -19,6 +19,7 @@ config.read('config.ini')
 config.sections()
 TREATMENT_FILE_PATH = config['outputPaths']['treatmentSubmissions']
 OUTPUT_FILE_NAME = config['outputPaths']['userMatchingReddits']
+TREATMENT_SUBREDDIT = config['scraperSettings']['treatmentSubreddit']
 
 # return a new dataframe that contains the author, subreddit and correspond number of posts in the submissions
 def count_by_author_and_subreddit(submissions):
@@ -51,7 +52,10 @@ def get_index_max_of_row(df):
     return df.idxmax(axis=1)
 
 """Takes in a sparse array of count by author per subreddit and returns the most unique frequency in each row relative to average distribution"""
-def get_most_unique_subreddit_from_counts(count_author_per_subreddit_array):
+def get_most_unique_subreddit_from_counts(count_author_per_subreddit_array, treatment_subreddit = None):
+    if treatment_subreddit != None:
+        count_author_per_subreddit_array = count_author_per_subreddit_array.drop(columns = treatment_subreddit)
+    count_author_per_subreddit_array['default_sr'] = 0.1
     # normalizing each row to have a sum of 1, so that the number reflect the user's activity across different subreddits
     activity_array = normalize_row(count_author_per_subreddit_array)
     # finding average user distribution per subreddit
@@ -64,36 +68,38 @@ def get_most_unique_subreddit_from_counts(count_author_per_subreddit_array):
     max_idx.columns = ['author','most_unique_sr']
     return max_idx
 
-def get_most_unique_subreddit_from_treatment(treatment_file_name):
+def get_most_unique_subreddit_from_treatment(treatment_file_name,treatment_subreddit = None):
     submissions = pd.read_csv(treatment_file_name)
     counts_author_subreddit_pair = count_by_author_and_subreddit(submissions)
     counts_author_per_subreddit = get_author_per_subreddit(counts_author_subreddit_pair)
     count_array = get_sparse_df(counts_author_per_subreddit)
-    return get_most_unique_subreddit_from_counts(count_array)
+    return get_most_unique_subreddit_from_counts(count_array,treatment_subreddit)
 
 # group the submissions by author and subreddit, then compute the average of created (the resulting column is still called created)
 def get_avg_active_created_for_author_in_subreddit(submissions):
     return submissions.groupby(['author','subreddit'])['created'].mean().reset_index()
 
-# left join the subreddits_for_matching df with avg_active_time df by matching author and subreddit, producing a df that contains author, most unique sr and the average time the author has posted in that subreddit
+# inner join the subreddits_for_matching df with avg_active_time df by matching author and subreddit, producing a df that contains author, most unique sr and the average time the author has posted in that subreddit
+# so that we remove the default sr
 def merge_matching_subreddit_and_avg_active_time(subreddit_for_matching, avg_active_time):
-    merged_df = pd.merge(subreddit_for_matching, avg_active_time, how='left', left_on=['author','most_unique_sr'], right_on = ['author','subreddit'])
+    merged_df = pd.merge(subreddit_for_matching, avg_active_time, how='inner', left_on=['author','most_unique_sr'], right_on = ['author','subreddit'])
     merged_df = merged_df[['author','most_unique_sr','created']]
     return merged_df
 
-def get_most_unique_subreddit_and_time_from_treatment(treatment_file_name):
+def get_most_unique_subreddit_and_time_from_treatment(treatment_file_name, treatment_subreddit = None):
     submissions = pd.read_csv(treatment_file_name)
+    submissions = submissions.drop([])
     counts_author_subreddit_pair = count_by_author_and_subreddit(submissions)
     counts_author_per_subreddit = get_author_per_subreddit(counts_author_subreddit_pair)
     count_array = get_sparse_df(counts_author_per_subreddit)
-    sr_for_matching = get_most_unique_subreddit_from_counts(count_array)
+    sr_for_matching = get_most_unique_subreddit_from_counts(count_array,treatment_subreddit)
     active_time_df = get_avg_active_created_for_author_in_subreddit(submissions)
     merged_df = merge_matching_subreddit_and_avg_active_time(sr_for_matching, active_time_df)
     return merged_df
 
 
 if __name__ == '__main__':
-    most_unique_sr = get_most_unique_subreddit_and_time_from_treatment(TREATMENT_FILE_PATH)
+    most_unique_sr = get_most_unique_subreddit_and_time_from_treatment(TREATMENT_FILE_PATH, TREATMENT_SUBREDDIT)
     # output to csv
     most_unique_sr.to_csv(OUTPUT_FILE_NAME)
 
