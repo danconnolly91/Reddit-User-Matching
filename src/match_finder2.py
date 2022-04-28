@@ -150,9 +150,10 @@ def match_a_user(user_sr_pair):
     if target_stats == [None, None, None, None]:
         return None
 
-    #start searching posts around the target user's account creation date   
-    start_at = math.floor(target_stats[3]) 
-    start_at = check_start_date(reddit, unique_sr, start_at)
+    #start searching posts around the target user's account creation date 
+    start_at = int(TREATMENT_DF.loc[TREATMENT_DF['author'] == treatment_user,'created']) 
+    # start_at = math.floor(target_stats[3]) 
+    # start_at = check_start_date(reddit, unique_sr, start_at)
         
     #get list of submissions in the most unique subreddit for that user
     print('pulling posts for ' + treatment_user + ' in '+ unique_sr)
@@ -180,9 +181,9 @@ SEARCH_WINDOW_IN_WKS = int(config['matchSettings']['SEARCH_WINDOW_IN_WKS'])
 MAX_MATCHES_BEFORE_WRITE = int(config['matchSettings']['MAX_MATCHES_BEFORE_WRITE'])
 utc_year = 31536000000 #difference of 1 year between 2 timestamps
 
-treatment_df = pd.read_csv(UNIQUE_SR_PATH)
-treatment_dict = dict(zip(treatment_df['author'], treatment_df['most_unique_sr']))
-treatment_pair = treatment_df[['author','most_unique_sr']]
+TREATMENT_DF = pd.read_csv(UNIQUE_SR_PATH)
+treatment_dict = dict(zip(TREATMENT_DF['author'], TREATMENT_DF['most_unique_sr']))
+treatment_pair = TREATMENT_DF[['author','most_unique_sr']]
 
 reddit = praw.Reddit(client_id=config['scraperSettings']['clientId'], client_secret=config['scraperSettings']['clientSecret'],
                      user_agent=config['scraperSettings']['userAgent'])
