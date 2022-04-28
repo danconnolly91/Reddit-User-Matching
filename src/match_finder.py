@@ -164,7 +164,7 @@ def check_posts_for_match(list_of_matches, counter, treatment_username, matching
     return None
 
 
-def match_users(treatment_user_dict):
+def match_users(treatment_user_dict, treatment_user_df):
     matches = []
     write_counter = 0
 
@@ -173,9 +173,8 @@ def match_users(treatment_user_dict):
         if target_stats == [None, None, None, None]:
             matches.append([treatment_user, unique_sr, ''])
 
-    #start searching posts around the target user's account creation date   
-        start_at = math.floor(target_stats[3]) 
-        start_at = check_start_date(reddit, unique_sr, start_at)
+    #start searching posts around the target user's average activity in the unique_sr  
+        start_at = int(treatment_user_df.loc[treatment_user_df['author'] == treatment_user, 'created'])
         
     #get list of submissions in the most unique subreddit for that user
         print('pulling posts for ' + treatment_user + ' in '+ unique_sr)
@@ -211,7 +210,7 @@ reddit = praw.Reddit(client_id=config['scraperSettings']['clientId'], client_sec
 api = PushshiftAPI(reddit)
 
 if __name__ == '__main__':
-    matches = match_users(treatment_dict)
+    matches = match_users(treatment_dict, treatment_df)
 
 end = time.time()
 print("runtime: " + str(end - start))
